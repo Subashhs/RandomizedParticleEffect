@@ -1,87 +1,92 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ParticleEffectManager : MonoBehaviour
+public class RandomParticleEffect : MonoBehaviour
 {
-    public Button createParticleEffectButton; // Assign the UI Button in the inspector
-    public GameObject particlePrefab; // Assign a default particle system prefab
+    // Particle system prefab reference
+    public GameObject particlePrefab;
+
+    // Reference to the UI button
+    public Button createParticleEffectButton;
 
     void Start()
     {
-        createParticleEffectButton.onClick.AddListener(CreateRandomParticleEffect);
+        // Ensure the button is connected and add a listener for the click event
+        if (createParticleEffectButton != null)
+        {
+            createParticleEffectButton.onClick.AddListener(CreateRandomParticleEffect);
+        }
+        else
+        {
+            Debug.LogError("Create Particle Effect Button is not assigned in the Inspector!");
+        }
     }
 
+    // Method to create and randomize a new particle effect
     void CreateRandomParticleEffect()
     {
-        // Instantiate a particle system from the prefab
-        GameObject particleObject = Instantiate(particlePrefab);
-        ParticleSystem particleSystem = particleObject.GetComponent<ParticleSystem>();
-
-        // Get particle system main module to edit core properties
-        var main = particleSystem.main;
-
-        // Randomize duration
-        main.duration = Random.Range(1f, 10f);
-
-        // Randomize start size
-        main.startSize = Random.Range(0.1f, 3f);
-
-        // Randomize start speed
-        main.startSpeed = Random.Range(1f, 10f);
-
-        // Randomize start color
-        main.startColor = new Color(Random.value, Random.value, Random.value, 1f);
-
-        // Randomize gravity
-        main.gravityModifier = Random.Range(-1f, 1f);
-
-        // Randomize emission rate
-        var emission = particleSystem.emission;
-        emission.rateOverTime = Random.Range(10, 100);
-
-        // Randomize shape (between a few types)
-        var shape = particleSystem.shape;
-        int randomShape = Random.Range(0, 3);
-        switch (randomShape)
+        // Ensure the particle prefab is assigned
+        if (particlePrefab != null)
         {
-            case 0: shape.shapeType = ParticleSystemShapeType.Cone; break;
-            case 1: shape.shapeType = ParticleSystemShapeType.Sphere; break;
-            case 2: shape.shapeType = ParticleSystemShapeType.Hemisphere; break;
+            // Instantiate the particle system prefab
+            GameObject particleObj = Instantiate(particlePrefab, Vector3.zero, Quaternion.identity);
+            ParticleSystem ps = particleObj.GetComponent<ParticleSystem>();
+
+            // Check if the ParticleSystem component is found
+            if (ps != null)
+            {
+                // Stop the particle system and clear existing particles
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+                // Ensure the particle system is completely stopped
+                if (!ps.isPlaying)
+                {
+                    // Access the main module to modify particle properties
+                    ParticleSystem.MainModule main = ps.main;
+
+                    // Randomize various particle system properties
+                    main.startLifetime = Random.Range(1.0f, 5.0f);       // Random lifetime
+                    main.startSpeed = Random.Range(2.0f, 10.0f);        // Random speed
+                    main.startSize = Random.Range(0.1f, 1.5f);          // Random size
+                    main.startColor = Random.ColorHSV();                // Random color
+                    main.gravityModifier = Random.Range(-1.0f, 1.0f);   // Random gravity
+                    main.duration = Random.Range(2.0f, 10.0f);          // Random duration
+                    main.startRotation = Random.Range(0.0f, Mathf.PI * 2); // Random rotation
+                    main.startDelay = Random.Range(0.0f, 2.0f);         // Random start delay
+
+                    // Randomize the emission rate
+                    ParticleSystem.EmissionModule emission = ps.emission;
+                    emission.rateOverTime = Random.Range(10, 100);       // Random emission rate
+
+                    // Enable or disable noise with a random strength
+                    ParticleSystem.NoiseModule noise = ps.noise;
+                    noise.enabled = Random.value > 0.5f;
+                    noise.strength = Random.Range(0.0f, 2.0f);          // Random noise strength
+
+                    // Randomize the shape of the particle emission
+                    ParticleSystem.ShapeModule shape = ps.shape;
+                    shape.angle = Random.Range(0, 180);                 // Random angle
+                    shape.radius = Random.Range(0.1f, 2.0f);            // Random radius
+
+                    // Restart the particle system with the new randomized settings
+                    ps.Play();
+
+                    // Destroy the particle effect after its lifetime has passed
+                    Destroy(particleObj, main.duration + 2.0f);
+                }
+                else
+                {
+                    Debug.LogError("Particle system is still playing. Unable to modify duration.");
+                }
+            }
+            else
+            {
+                Debug.LogError("Particle System component not found on the instantiated prefab!");
+            }
         }
-
-        // Randomize size over lifetime
-        var sizeOverLifetime = particleSystem.sizeOverLifetime;
-        sizeOverLifetime.enabled = true;
-        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1, Random.Range(0.1f, 2f));
-
-        // Randomize noise
-        var noise = particleSystem.noise;
-        noise.enabled = Random.Range(0, 2) == 1;
-        noise.strength = Random.Range(0f, 2f);
-
-        // Randomize rotation over lifetime
-        var rotationOverLifetime = particleSystem.rotationOverLifetime;
-        rotationOverLifetime.enabled = true;
-        rotationOverLifetime.z = new ParticleSystem.MinMaxCurve(0, Random.Range(-180f, 180f));
-
-        // Randomize particle texture from a pool of textures
-        var renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
-        renderer.material = GetRandomParticleMaterial();
-
-        // Position particle effect randomly within view
-        particleObject.transform.position = new Vector3(Random.Range(-5f, 5f), Random.Range(-3f, 3f), Random.Range(-2f, 2f));
-
-        // Play the particle system
-        particleSystem.Play();
-
-        // Optionally, destroy the particle effect after some time
-        Destroy(particleObject, main.duration + 1f);
-    }
-
-    Material GetRandomParticleMaterial()
-    {
-        // You can add different materials for the particles (assign textures in Unity)
-        Material[] particleMaterials = new Material[3]; // Assign these in the Unity Inspector
-        return particleMaterials[Random.Range(0, particleMaterials.Length)];
+        else
+        {
+            Debug.LogError("ParticlePrefab is not assigned in the Inspector!");
+        }
     }
 }
